@@ -1,4 +1,4 @@
-# testingbloc_course
+# Flutter - StateManagement
 
 A new Flutter project.
 
