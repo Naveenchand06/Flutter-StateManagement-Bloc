@@ -1,115 +1,199 @@
+import 'dart:convert';
+import 'dart:io';
+
+import "package:bloc/bloc.dart";
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:developer' as devtools show log;
+
+extension Log on Object {
+  void log() => devtools.log(toString());
+}
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
+  runApp(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Flutter',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+      home: BlocProvider(
+        create: ((_) => PersonsBloc()),
+        child: const HomePage(),
+      ),
+    ),
+  );
+}
+
+// -> Bloc requires an action as a input
+// The reason for creating a abstract class is
+// |-> Bloc's genrenic type expects one event or one action type
+// |-> Thats why we have this abstract class
+// |-> Abstract class cannot be initialized,
+// \-> classes which extends this abstract class are proper event or proper action
+
+// @immutable
+// |-> Used to annotate a class C. Indicates that C and all subtypes of C must be immutable.
+
+@immutable
+abstract class LoadAction {
+  const LoadAction();
+}
+
+@immutable
+class LoadPersonsAction implements LoadAction {
+  final PersonUrl url;
+
+  const LoadPersonsAction({required this.url}) : super();
+}
+
+enum PersonUrl {
+  persons1,
+  persons2,
+}
+
+// const Iterable<String> name = ['foo', 'bar'];
+extension UrlString on PersonUrl {
+  String get urlString {
+    switch (this) {
+      case PersonUrl.persons1:
+        return 'http://192.168.1.6:5500/api/persons1.json';
+      case PersonUrl.persons2:
+        return 'http://192.168.1.6:5500/api/persons2.json';
+    }
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
+@immutable
+class Person {
+  final String name;
+  final int age;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  // const Person({
+  //   required this.name,
+  //   required this.age,
+  // });
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  Person.fromJson(Map<String, dynamic> json)
+      : name = json['name'] as String,
+        age = json['age'] as int;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  String toString() {
+    return 'Person(name: $name, age: $age)';
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+Future<Iterable<Person>> getPersons(String url) => HttpClient()
+    .getUrl(Uri.parse(url)) // Requestion goes
+    .then((req) => req.close()) // Request goes here and becomes Response
+    .then((resp) =>
+        resp.transform(utf8.decoder).join()) // Response becomes a String
+    .then((str) => json.decode(str) as List<dynamic>) // String becomes list
+    .then((list) => list.map((e) => Person.fromJson(e))); // List becomes Person
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+@immutable
+class FetchResult {
+  final Iterable<Person> persons;
+  final bool isRetrievedFromCache;
+  const FetchResult({
+    required this.persons,
+    required this.isRetrievedFromCache,
+  });
+
+  @override
+  String toString() =>
+      'FetchResult (isRetrievedFromCache = $isRetrievedFromCache, person = $persons)';
+}
+
+// Creating a Bloc with event and Action
+// Initialstate is null
+// We need a cache in bloc
+class PersonsBloc extends Bloc<LoadAction, FetchResult?> {
+  final Map<PersonUrl, Iterable<Person>> _cache = {};
+  PersonsBloc() : super(null) {
+    // This on function comes inside constructor of a Bloc
+    // on functions has event type
+    on<LoadPersonsAction>((event, emit) async {
+      final url = event.url;
+      if (_cache.containsKey(url)) {
+        final cachedPersons = _cache[url]!;
+        final result =
+            FetchResult(persons: cachedPersons, isRetrievedFromCache: true);
+        emit(result);
+      } else {
+        final persons = await getPersons(url.urlString);
+        _cache[url] = persons;
+        final result =
+            FetchResult(persons: persons, isRetrievedFromCache: false);
+        emit(result);
+      }
     });
   }
+}
+
+extension Subscript<T> on Iterable<T> {
+  T? operator [](int index) => length > index ? elementAt(index) : null;
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Home'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
+      body: Column(
+        children: [
+          Row(
+            children: [
+              TextButton(
+                onPressed: () {
+                  context.read<PersonsBloc>().add(
+                        const LoadPersonsAction(url: PersonUrl.persons1),
+                      );
+                },
+                child: const Text('Load json #1'),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.read<PersonsBloc>().add(
+                        const LoadPersonsAction(url: PersonUrl.persons2),
+                      );
+                },
+                child: const Text('Load json #2'),
+              ),
+            ],
+          ),
+          BlocBuilder<PersonsBloc, FetchResult?>(
+            buildWhen: (previous, current) {
+              return previous?.persons != current?.persons;
+            },
+            builder: (context, fetchResult) {
+              fetchResult?.log();
+
+              final persons = fetchResult?.persons;
+              if (persons == null) {
+                return const SizedBox();
+              }
+              return Expanded(
+                child: ListView.builder(
+                  itemCount: persons.length,
+                  itemBuilder: (context, index) {
+                    final person = persons[index]!;
+                    return ListTile(
+                      title: Text(person.name),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
