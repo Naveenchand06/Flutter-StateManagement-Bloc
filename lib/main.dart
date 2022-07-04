@@ -5,7 +5,7 @@ import 'package:testingbloc_course/views/home_page.dart';
 // for that, we are using one event and two Blocs which extends one parent Bloc
 // This parent bloc contains the Event Action or state change based on the event
 
-// |-> AppBlocView is a Generic Widget for AppBloc.
+// |-> AppBlocView is a Generic Widget for which accepts a type of AppBloc.
 // |-> AppBlocView triggers a function which create a periodic stream of events (triggers BLOC) NOTE: GENERIC BLOC
 
 // |-> HomePage provides two blocs using MultiBlocProvider
