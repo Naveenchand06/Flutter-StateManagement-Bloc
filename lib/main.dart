@@ -30,7 +30,7 @@ void main() {
 // So, the current state is AppState class
 // The bloc we created for this is AppBloc class
 // Actions or events that can happen in the app are listed in 'actions.dart' file.
-// Define how the state should change when a action is happening in the constructor of AppBloc class
+// Define how the state should change when a action is happening in the constructor of AppBloc class (on() function)
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
