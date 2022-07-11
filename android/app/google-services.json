@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "448218155894",
+    "project_id": "bloc-statemanage-firebase",
+    "storage_bucket": "bloc-statemanage-firebase.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:448218155894:android:32fa977e63dd5139a34857",
+        "android_client_info": {
+          "package_name": "naveenchand.learnbloc.testingbloc_course"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "448218155894-seljma1u48mk2phda5cee6t6snnkot4k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwDNfbPmGvIl8fGH1SLrtD2JfrjKCFfi8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "448218155894-seljma1u48mk2phda5cee6t6snnkot4k.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
